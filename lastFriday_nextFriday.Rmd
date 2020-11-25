@@ -1,0 +1,112 @@
+---
+title: "SP500 and witching day"
+author: "Maggie Sha"
+date: "2020/11/23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(quantmod)
+library(RcppBDT)
+library(tidyverse)
+library(timeDate)
+library(lubridate)
+```
+
+
+```{r cars}
+# read sp500 data from yahoo
+GSPC <- read.csv("^GSPC.csv")
+```
+
+
+
+```{r}
+# get dates of witching days
+for (i in 1990:2020){
+  Mar <- getNthDayOfWeek(third, Fri, 3, i)
+  Mar1 <- Mar-7
+  Mar2 <- getNthDayOfWeek(fourth, Fri, 3, i)
+  
+  
+  Jun <- getNthDayOfWeek(third, Fri, 6, i)
+  Jun1 <- Jun-7
+  Jun2 <- getNthDayOfWeek(fourth, Fri, 6, i)
+  
+  Sep <- getNthDayOfWeek(third, Fri, 9, i)
+  Sep1 <- Sep-7
+  Sep2 <- getNthDayOfWeek(fourth, Fri, 9, i)
+  
+  Dec <- getNthDayOfWeek(third, Fri, 12, i)
+  Dec1 <- Dec-7
+  Dec2 <- getNthDayOfWeek(fourth, Fri, 12, i)
+  
+  
+  if ( i == 1990){
+    quad_witching_date <- cbind.data.frame(Mar1,Mar,Mar2,Jun1,Jun,Jun2,Sep1,Sep,Sep2,Dec1,Dec,Dec2)
+  }
+  else{
+    quad_witching_date <- rbind.data.frame(quad_witching_date, cbind.data.frame(Mar1,Mar,Mar2,Jun1,Jun,Jun2,Sep1,Sep,Sep2,Dec1,Dec,Dec2))
+  }
+}
+
+
+quad_witching <- data.frame(day = c(quad_witching_date[,'Mar1'],quad_witching_date[,'Mar'], quad_witching_date[,'Mar2'], quad_witching_date[,'Jun1'], quad_witching_date[,'Jun'], quad_witching_date[,'Jun2'], quad_witching_date[,'Sep1'], quad_witching_date[,'Sep'], quad_witching_date[,'Sep2'], quad_witching_date[,'Dec1'], quad_witching_date[,'Dec'], quad_witching_date[,'Dec2']))
+quad_witching$day<- as.Date(quad_witching$day)
+
+```
+
+```{r}
+# only keep SP500 data which are on witching days
+GSPC <- GSPC[is.element(as.Date(GSPC$Date),as.Date(quad_witching$day)),]
+
+
+colnames(quad_witching) <- "Date"
+
+# only keep 'Date' and 'Adj.Close' columns
+GSPC <- GSPC[,-2:-5]
+GSPC <- GSPC[-3]
+GSPC$Date <- as.Date(GSPC$Date)
+quad_witching$Date <- as.Date(quad_witching$Date )
+
+
+# full join the SP500 data and witching days, the missing values are included as NAs
+with_missing <- full_join(GSPC,quad_witching)
+with_missing <- with_missing[order(with_missing$Date),]
+
+
+# choose the last Friday and next Friday of each witching day
+# select the corresponding date and percentage change of Adj.Close 
+# seperate them into two datasets called lastF and nextF.
+ for (i in 1:(nrow(with_missing)/3)) {
+   l <- (with_missing$Adj.Close[i*3-1] - with_missing$Adj.Close[i*3-2]) /  with_missing$Adj.Close[i*3-2]
+   n <- (with_missing$Adj.Close[i*3]-with_missing$Adj.Close[i*3-1]) /  with_missing$Adj.Close[i*3-1]
+   d1 <- as.Date(with_missing$Date[i*3-2])
+   d2 <- as.Date(with_missing$Date[i*3])
+   if (i == 1){
+      lastF <- cbind.data.frame(l)
+      Date1 <- cbind.data.frame(d1)
+      nextF <- cbind.data.frame(n)
+      Date2 <- cbind.data.frame(d2)
+    } else {
+     lastF <- rbind.data.frame(lastF,cbind.data.frame(l))
+     Date1 <- rbind.data.frame(Date1,cbind.data.frame(d1))
+     nextF <- rbind.data.frame(nextF,cbind.data.frame(n))
+     Date2 <- rbind.data.frame(Date2,cbind.data.frame(d2))
+    }  
+ }
+
+Date1 <- cbind(Date1,lastF)
+colnames(Date1) <- c("Date","Percentage_Change")
+write.csv(Date1,"D:\\MA675 FIDELITY\\lastF.csv", row.names = FALSE)
+
+
+Date2 <- cbind(Date2,nextF)
+colnames(Date2) <- c("Date","Percentage_Change")
+write.csv(Date2,"D:\\MA675 FIDELITY\\nextF.csv", row.names = FALSE)
+```
+
+
+
+
