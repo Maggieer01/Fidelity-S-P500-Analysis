@@ -99,12 +99,12 @@ with_missing <- with_missing[order(with_missing$Date),]
 
 Date1 <- cbind(Date1,lastF)
 colnames(Date1) <- c("Date","Percentage_Change")
-write.csv(Date1,"D:\\MA675 FIDELITY\\lastF.csv", row.names = FALSE)
+# write.csv(Date1,"D:\\MA675 FIDELITY\\lastF.csv", row.names = FALSE)
 
 
 Date2 <- cbind(Date2,nextF)
 colnames(Date2) <- c("Date","Percentage_Change")
-write.csv(Date2,"D:\\MA675 FIDELITY\\nextF.csv", row.names = FALSE)
+# write.csv(Date2,"D:\\MA675 FIDELITY\\nextF.csv", row.names = FALSE)
 ```
 
 ```{r}
@@ -129,4 +129,106 @@ chisq.test(Date1$Percentage_Change,Date2$Percentage_Change)
 # X-squared = 11772, df = 11664, p-value = 0.2391
 ```
 
+```{r add vix}
+vix <-read.csv("^VIX.csv")
 
+# lastvix <- vix[is.element(as.Date(vix$Date),as.Date(Date1$Date)),]
+# nextvix <- vix[is.element(as.Date(vix$Date),as.Date(Date2$Date)),]
+
+vix <- vix[,c(1,6)]
+vix$Date <- as.Date(vix$Date)
+
+lastF <- merge(Date1,vix, by='Date')
+nextF <- merge(Date2,vix, by='Date')
+
+colnames(lastF) <- c("Date","Percentage_Change","VIX")
+colnames(nextF) <- c("Date","Percentage_Change","VIX")
+
+```
+```{r}
+# lastFriday's vix trend
+hist(lastF$VIX)
+```
+
+```{r}
+# nextFriday's vix trend
+hist(nextF$VIX)
+```
+
+```{r}
+# add vixlevel
+# define vexlevel as 'extreme','high','median' and 'low
+lastF$vixLevel <- 0
+nextF$vixLevel <- 0
+colnames(lastF)[4] <- "vixlevel"
+colnames(nextF)[4] <- "vixlevel"
+
+
+f <- function(n,c1,c2) {
+  for (i in 1:n)
+  if(c1[i] >= 30){
+    c2[i] <- "extreme"
+  } else if (c1[i] < 30 & c1[i] >= 20){
+    c2[i] <- "high"
+  } else if (c1[i] < 20 & c1[i] >= 12){
+    c2[i] <- "median"
+  } else if(c1[i] < 12){
+    c2[i] <- "low"
+  }
+  return (c2)
+}
+
+
+lastF$vixlevel <- f(nrow(lastF), lastF$VIX, lastF$vixlevel)
+nextF$vixlevel <- f(nrow(nextF), nextF$VIX, nextF$vixlevel)
+```
+
+```{r}
+# lastF's SP500 Percentage Change by vixlevel
+ggplot(lastF, aes(x=Date, y=Percentage_Change, fill=vixlevel)) + 
+  geom_bar(stat = 'identity')
+```
+
+```{r}
+# nextF's SP500 Percentage Change by vixlevel
+ggplot(nextF, aes(x=Date, y=Percentage_Change, fill=vixlevel)) + 
+  geom_bar(stat = 'identity')
+```
+
+
+```{r}
+# only pick vixlevel = 'median' and compare percentage change
+lastF1 <- lastF %>% filter(vixlevel == 'median')
+nextF1 <- nextF %>% filter(vixlevel == 'median')
+
+t.test(lastF1$Percentage_Change,nextF1$Percentage_Change)
+# 	Welch Two Sample t-test
+# 
+# data:  lastF1$Percentage_Change and nextF1$Percentage_Change
+# t = 3.6054, df = 104.61, p-value = 0.0004793
+# alternative hypothesis: true difference in means is not equal to 0
+# 95 percent confidence interval:
+#  0.004448934 0.015323341
+# sample estimates:
+#    mean of x    mean of y 
+#  0.005976128 -0.003910010 
+
+```
+
+```{r}
+# pick vixlevel = 'median' and 'low' and compare percentage change
+lastF2 <- lastF %>% filter(vixlevel == 'median' | vixlevel == 'low')
+nextF2 <- nextF %>% filter(vixlevel == 'median' | vixlevel == 'low')
+
+t.test(lastF2$Percentage_Change,nextF2$Percentage_Change)
+# Welch Two Sample t-test
+# 
+# data:  lastF2$Percentage_Change and nextF2$Percentage_Change
+# t = 3.7024, df = 131.43, p-value = 0.0003132
+# alternative hypothesis: true difference in means is not equal to 0
+# 95 percent confidence interval:
+#  0.004035773 0.013296200
+# sample estimates:
+#    mean of x    mean of y 
+#  0.005915681 -0.002750306 
+```
