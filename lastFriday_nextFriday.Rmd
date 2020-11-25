@@ -107,6 +107,26 @@ colnames(Date2) <- c("Date","Percentage_Change")
 write.csv(Date2,"D:\\MA675 FIDELITY\\nextF.csv", row.names = FALSE)
 ```
 
+```{r}
+t.test(Date1$Percentage_Change,Date2$Percentage_Change)
 
+# 	Welch Two Sample t-test
+# 
+# data:  Date1$Percentage_Change and Date2$Percentage_Change
+# t = 2.4356, df = 228.86, p-value = 0.01563
+# alternative hypothesis: true difference in means is not equal to 0
+# 95 percent confidence interval:
+#  0.001470546 0.013926242
+# sample estimates:
+#    mean of x    mean of y 
+#  0.003820242 -0.003878152 
+
+
+chisq.test(Date1$Percentage_Change,Date2$Percentage_Change)
+# Pearson's Chi-squared test
+# 
+# data:  Date1$Percentage_Change and Date2$Percentage_Change
+# X-squared = 11772, df = 11664, p-value = 0.2391
+```
 
 
